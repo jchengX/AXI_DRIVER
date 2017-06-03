@@ -10,9 +10,9 @@
 class axi_master_driver extends uvm_driver #(axi_transaction);
 
   virtual interface axi_if    m_vif;
-  axi_master_conf             m_conf;
-  axi_transfer                m_wr_queue[$];
-  axi_transfer                m_rd_queue[$];
+  axi_master_conf             m_confg;
+  axi_transaction                m_wr_queue[$];
+  axi_transaction                m_rd_queue[$];
   int unsigned                m_num_sent;
 
   event                       event_sent_write_trx;
@@ -20,7 +20,6 @@ class axi_master_driver extends uvm_driver #(axi_transaction);
 
   int unsigned                m_wr_addr_indx = 0;
   int unsigned                m_wr_data_indx = 0;
-
   int unsigned                m_rd_addr_indx = 0;
 
 	`uvm_component_utils_begin(axi_master_driver)
@@ -32,13 +31,13 @@ class axi_master_driver extends uvm_driver #(axi_transaction);
   endfunction:new
 
   // Additional class methods
-  extern virtual function void assign_vi(virtual interface AXI_vif vif);
-  extern virtual function void assign_conf(axi_master_conf conf);
-
+  //extern virtual function void assign_vif(virtual interface axi_if vif);
+  //extern virtual function void assign_conf(axi_master_conf conf);
+  
   extern virtual task run_phase(uvm_phase phase);
   extern virtual function void connect_phase(uvm_phase phase);
   extern virtual protected task get_and_drive();
-  extern virtual protected task reset_signals();
+  extern virtual protected task reset();
   extern virtual protected task drive_transfer(AXI_transfer trx);
  // extern virtual function void report();
 
@@ -58,31 +57,22 @@ class axi_master_driver extends uvm_driver #(axi_transaction);
 endclass : axi_master_driver
 
 
-function void axi_master_driver::assign_vi(virtual interface AXI_vif vif);
-  m_vif = vif;
-endfunction
+//function void axi_master_driver::assign_vif(virtual interface axi_if vif);
+//  m_vif = vif;
+//endfunction
 
-
-function void axi_master_driver::assign_conf(axi_master_conf conf);
-  m_conf = conf;
-endfunction
-
+//function void axi_master_driver::assign_conf(axi_master_conf conf);
+//  m_conf = conf;
+//endfunction
 
 //UVM connect_phase
 function void axi_master_driver::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
-
-  if (!uvm_config_db#(virtual interface axi_vif)::get(this, "", "m_vif", m_vif))
-   `uvm_error("NOVIF",{"virtual interface must be set for: ",get_full_name(),".m_vif"})
-
-  assert(m_conf!=null);
-//  if (!uvm_config_db#(axi_master_conf)::get(this, "", "m_conf", m_conf))
-//    `uvm_error("NOCONF",{"axi conf must be set for: ", get_full_name(), ".m_conf"})
-
+  if (!uvm_config_db#(virtual interface axi_if)::get(this, "", "m_vif", m_vif))
+   `uvm_fatal("axi_master_driver","virtual interface must be set for m_vif")
 endfunction : connect_phase
 
-
-// UVM run() phase spawn sub events
+// UVM run_phase
 task axi_master_driver::run_phase(uvm_phase phase);
     fork
       get_and_drive();
@@ -97,8 +87,12 @@ task axi_master_driver::run_phase(uvm_phase phase);
     join
 endtask : run_phase
 
-
-// Gets transfers from the sequencer and passes them to the driver.
+//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+//task:
+//input:axi master signal
+//output:n/a
+//description:Gets transfers from the sequencer and passes them to the driver.
+//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 task axi_master_driver::get_and_drive();
     wait_for_reset();
     sent_trx_to_seq();
@@ -106,20 +100,19 @@ endtask : get_and_drive
 
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 //task:reset
-//input:axi master signal
+//input:n/a
 //output:n/a
 //description:reset all signals
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 task axi_master_driver::reset();
-    forever begin
+    begin
       @(posedge m_vif.ARESET_N);
-        m_vif.AXI_AWID   <= 0;
-        m_vif.AXI_AWADDR <= 0;
-	m_vif.AXI_
-		
-        // ....
+        m_vif.AWID   <= 0;
+        m_vif.AWADDR <= 0;
+	m_vif.AWLEN  <= 0;
+		...
     end
-endtask : reset_signals
+endtask:reset
 
 
 task axi_master_driver::wait_for_reset();
@@ -139,70 +132,64 @@ task axi_master_driver::sent_trx_to_seq();
     end
 endtask : sent_trx_to_seq
 
-
-// free write trx
-task axi_master_driver::free_write_trx();
-
-endtask : free_write_trx
-
-// free read trx
-task axi_master_driver::free_read_trx();
-
-endtask : free_read_trx
-
-
-// Gets a transfer and drive it into the DUT
-// push the trx to trx async queue
-task axi_master_driver::drive_transfer(AXI_transfer trx);
-
-    `uvm_info(get_type_name(), $psprintf("Driving \n%s", trx.sprint()), UVM_HIGH)
-
-    if (trx.rw == READ) begin
-        m_rd_queue.push_back(trx);
-
-    end else if (trx.rw == WRITE) begin
-        m_wr_queue.push_back(trx);
-
-    end else begin
-      `uvm_error("NOTYPE",{"type not support"})
-    end
+//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+//task:send
+//input:axi master signal
+//output:n/a
+//description:reset all signals
+//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+task axi_master_driver::send(axi_transaction tr);
+  forver begin
+  case(tr::op_cmd)
+    RESET:reset();
+    READ:begin
+         m_rd_queue.push_back(tr);
+	 end
+    WRITE:begin
+         m_wr_queue.push_back(tr);
+	 end
+    default:`uvm_fatal("axi_master_driver","axi_transaction must have a valid command!!")
+  endcase
 
     m_num_sent++;
     `uvm_info(get_type_name(), $psprintf("Item %0d Sent ...", m_num_sent), UVM_HIGH)
+    end
+endtask:send
 
-endtask : drive_transfer
-
-
-// addr write trx task by event_sent_write_trx.trigger
-task axi_master_driver::sent_addr_write_trx();
-    AXI_transfer m_trx;
+//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+//task:write
+//input:AWREADY,WREADY
+//output:AWID,AWADDR,AWLEN,AWSIZE,AWBURST,AWLOCK,AWCACHE,AWPROT,AWQOS,AWREGION,AWUSER,AWVALID,WID,WDATA,WSTRB,WLAST,WUSER,WVALID
+//description:axi write 
+//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+task axi_master_driver::write();
+    axi_transaction m_tr;
 
     forever begin
       // if write trx has existed...
-      repeat(m_wr_queue.size()==0) @(posedge m_vif.AXI_ACLK);
+      repeat(m_wr_queue.size()==0) @(posedge m_vif.ACLK);
 
       if (m_wr_addr_indx < m_wr_queue.size()) begin
           m_trx = m_wr_queue[m_wr_addr_indx];
 
-          repeat(m_trx.addr_wt_delay) @(posedge m_vif.AXI_ACLK);
+          repeat(m_trx.addr_wt_delay) @(posedge m_vif.ACLK);
 
           // sent trx
-          `delay(m_conf.half_cycle);
           m_vif.AXI_AWVALID <= 1'b1;
-          m_vif.AXI_AWID    <= m_trx.id;
-          m_vif.AXI_AWADDR  <= m_trx.addr;
-          m_vif.AXI_AWREG   <= m_trx.region;
-          m_vif.AXI_AWLEN   <= m_trx.len;
-          m_vif.AXI_AWSIZE  <= m_trx.size;
-          m_vif.AXI_AWBURST <= m_trx.burst;
-          m_vif.AXI_AWLOCK  <= m_trx.lock;
-          m_vif.AXI_AWCACHE <= m_trx.cache;
-          m_vif.AXI_AWPROT  <= m_trx.prot;
-          m_vif.AXI_AWQOS   <= m_trx.qos;
-          @(posedge m_vif.AXI_ACLK);
+          m_vif.AXI_AWID    <= m_tr.id;
+          m_vif.AXI_AWADDR  <= m_tr.addr;
+          m_vif.AXI_AWREG   <= m_tr.region;
+          m_vif.AXI_AWLEN   <= m_tr.len;
+          m_vif.AXI_AWSIZE  <= m_tr.size;
+          m_vif.AXI_AWBURST <= m_tr.burst;
+          m_vif.AXI_AWLOCK  <= m_tr.lock;
+          m_vif.AXI_AWCACHE <= m_tr.cache;
+          m_vif.AXI_AWPROT  <= m_tr.prot;
+          m_vif.AXI_AWQOS   <= m_tr.qos;
+          @(posedge m_vif.ACLK);
 
-          // hold until AWREADY received
-          while (!m_vif.AXI_AWREADY) @(posedge m_vif.AXI_ACLK);
+          //wait AWREADY
+          while (!m_vif.AXI_AWREADY) @(posedge m_vif.ACLK);
 
           // free trx
           `delay(m_conf.half_cycle);
@@ -217,11 +204,17 @@ task axi_master_driver::sent_addr_write_trx();
       end
     end
 
-endtask : sent_addr_write_trx
+endtask:write
 
 
 // data write trx task by event_sent_write_trx.trigger
-task axi_master_driver::sent_data_write_trx();
+//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+//task:write
+//input:AWREADY,WREADY
+//output:AWID,AWADDR,AWLEN,AWSIZE,AWBURST,AWLOCK,AWCACHE,AWPROT,AWQOS,AWREGION,AWUSER,AWVALID,WID,WDATA,WSTRB,WLAST,WUSER,WVALID
+//description:axi write 
+//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+task axi_master_driver::write_data();
     int unsigned  i = 0;
     AXI_transfer  m_trx;
 
@@ -238,11 +231,11 @@ task axi_master_driver::sent_data_write_trx();
           while (i<=m_trx.len) begin
 
             `delay(m_conf.half_cycle);
-            m_vif.AXI_WVALID  <= 1'b1;
-            m_vif.AXI_WDATA   <= m_trx.data[i];
-            m_vif.AXI_WSTRB   <= m_trx.strb[i];
-            m_vif.AXI_WID     <= m_trx.id;
-            m_vif.AXI_WLAST   <= (i==m_trx.len)? 1'b1 : 1'b0;
+            m_vif.WVALID  <= 1'b1;
+            m_vif.WDATA   <= m_tr.data[i];
+            m_vif.WSTRB   <= m_tr.strb[i];
+            m_vif.WID     <= m_tr.id;
+            m_vif.WLAST   <= (i==m_trx.len)? 1'b1 : 1'b0;
             @(posedge m_vif.AXI_ACLK);
 
             if (m_vif.AXI_WREADY && m_vif.AXI_WVALID)
@@ -303,21 +296,21 @@ task axi_master_driver::sent_addr_read_trx();
 
           // sent trx
           `delay(m_conf.half_cycle);
-          m_vif.AXI_ARVALID <= 1'b1;
-          m_vif.AXI_ARID    <= m_trx.id;
-          m_vif.AXI_ARADDR  <= m_trx.addr;
-          m_vif.AXI_ARREADY <= m_trx.region;
-          m_vif.AXI_ARLEN   <= m_trx.len;
-          m_vif.AXI_ARSIZE  <= m_trx.size;
-          m_vif.AXI_ARBURST <= m_trx.burst;
-          m_vif.AXI_ARLOCK  <= m_trx.lock;
-          m_vif.AXI_ARCACHE <= m_trx.cache;
-          m_vif.AXI_ARPROT  <= m_trx.prot;
-          m_vif.AXI_ARQOS   <= m_trx.qos;
-          @(posedge m_vif.AXI_ACLK);
+          m_vif.ARVALID <= 1'b1;
+          m_vif.ARID    <= m_tr.id;
+          m_vif.ARADDR  <= m_tr.addr;
+          m_vif.ARREADY <= m_tr.region;
+          m_vif.ARLEN   <= m_tr.len;
+          m_vif.ARSIZE  <= m_tr.size;
+          m_vif.ARBURST <= m_tr.burst;
+          m_vif.ARLOCK  <= m_tr.lock;
+          m_vif.ARCACHE <= m_tr.cache;
+          m_vif.ARPROT  <= m_tr.prot;
+          m_vif.ARQOS   <= m_tr.qos;
+          @(posedge m_vif.ACLK);
 
           // hold until ARREADY received
-          while(!m_vif.AXI_ARREADY) @(posedge m_vif.AXI_ACLK);
+          while(!m_vif.ARREADY) @(posedge m_vif.ACLK);
           //void'(m_rd_queue.pop_front());
 
           // free trx
