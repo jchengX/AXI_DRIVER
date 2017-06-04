@@ -56,47 +56,31 @@ class axi_master_driver extends uvm_driver #(axi_transaction);
 
 endclass : axi_master_driver
 
-
-//function void axi_master_driver::assign_vif(virtual interface axi_if vif);
-//  m_vif = vif;
-//endfunction
-
-//function void axi_master_driver::assign_conf(axi_master_conf conf);
-//  m_conf = conf;
-//endfunction
-
 //UVM connect_phase
 function void axi_master_driver::connect_phase(uvm_phase phase);
   super.connect_phase(phase);
   if (!uvm_config_db#(virtual interface axi_if)::get(this, "", "m_vif", m_vif))
-   `uvm_fatal("axi_master_driver","virtual interface must be set for m_vif")
+   `uvm_fatal("axi_master_driver","No virtual interface specified dor this instance")
 endfunction : connect_phase
 
 // UVM run_phase
 task axi_master_driver::run_phase(uvm_phase phase);
-    fork
-      get_and_drive();
-      reset();
-      sent_addr_write_trx();
-      sent_data_write_trx();
-      received_resp_write_trx();
-      sent_addr_read_trx();
-      received_data_read_trx();
-      free_write_trx();
-      free_read_trx();
-    join
+ super.run_phase(phase);
+ reset();
+    forever begin
+     seq_item_port.get_next_item(seq);
+     case(seq.op_cmd)
+     	RESET:begin
+		reset();end
+	WRITE:begin 
+		write_addr();write_data;end
+	READ:begin
+		read_addr();read_data;end
+	default:`uvm_fatal("axi_driver","No valid command")
+     endcase
+     seq_item_port.item_done();
+     end
 endtask : run_phase
-
-//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-//task:
-//input:axi master signal
-//output:n/a
-//description:Gets transfers from the sequencer and passes them to the driver.
-//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-task axi_master_driver::get_and_drive();
-    wait_for_reset();
-    sent_trx_to_seq();
-endtask : get_and_drive
 
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 //task:reset
@@ -114,67 +98,21 @@ task axi_master_driver::reset();
     end
 endtask:reset
 
-
-task axi_master_driver::wait_for_reset();
-    @(posedge m_vif.AXI_ARESET_N)
-    `uvm_info(get_type_name(), "Reset dropped", UVM_MEDIUM)
-
-endtask : wait_for_reset
-
-
-// get next trx when reset has already done
-task axi_master_driver::sent_trx_to_seq();
-     forever begin
-        @(posedge m_vif.AXI_ACLK);
-        seq_item_port.get_next_item(req);
-        drive_transfer(req);
-        seq_item_port.item_done();
-    end
-endtask : sent_trx_to_seq
-
-//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-//task:send
-//input:axi master signal
-//output:n/a
-//description:reset all signals
-//TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-task axi_master_driver::send(axi_transaction tr);
-  forver begin
-  case(tr::op_cmd)
-    RESET:reset();
-    READ:begin
-         m_rd_queue.push_back(tr);
-	 end
-    WRITE:begin
-         m_wr_queue.push_back(tr);
-	 end
-    default:`uvm_fatal("axi_master_driver","axi_transaction must have a valid command!!")
-  endcase
-
-    m_num_sent++;
-    `uvm_info(get_type_name(), $psprintf("Item %0d Sent ...", m_num_sent), UVM_HIGH)
-    end
-endtask:send
-
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 //task:write
-//input:AWREADY,WREADY
-//output:AWID,AWADDR,AWLEN,AWSIZE,AWBURST,AWLOCK,AWCACHE,AWPROT,AWQOS,AWREGION,AWUSER,AWVALID,WID,WDATA,WSTRB,WLAST,WUSER,WVALID
-//description:axi write 
+//description:axi write address channel
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-task axi_master_driver::write();
+task axi_master_driver::write_addr();
     axi_transaction m_tr;
-
     forever begin
       // if write trx has existed...
       repeat(m_wr_queue.size()==0) @(posedge m_vif.ACLK);
 
       if (m_wr_addr_indx < m_wr_queue.size()) begin
-          m_trx = m_wr_queue[m_wr_addr_indx];
-
+          m_tr = m_wr_queue[m_wr_addr_indx];
           repeat(m_trx.addr_wt_delay) @(posedge m_vif.ACLK);
-
-          // sent trx
+	  
+          // sent tr
           m_vif.AXI_AWVALID <= 1'b1;
           m_vif.AXI_AWID    <= m_tr.id;
           m_vif.AXI_AWADDR  <= m_tr.addr;
@@ -190,76 +128,56 @@ task axi_master_driver::write();
 
           //wait AWREADY
           while (!m_vif.AXI_AWREADY) @(posedge m_vif.ACLK);
-
-          // free trx
-          `delay(m_conf.half_cycle);
+	  @(posedge m_vif.ACLK);
           m_vif.AXI_AWVALID <= 1'b0;
-          m_trx.addr_done = `TRUE;
-          @(posedge m_vif.AXI_ACLK);
-
           m_wr_addr_indx += 1;
-
-      end else begin
-        @(posedge m_vif.AXI_ACLK);
+      end 
+      else begin
+        @(posedge m_vif.ACLK);
       end
     end
 
 endtask:write
 
-
-// data write trx task by event_sent_write_trx.trigger
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-//task:write
-//input:AWREADY,WREADY
-//output:AWID,AWADDR,AWLEN,AWSIZE,AWBURST,AWLOCK,AWCACHE,AWPROT,AWQOS,AWREGION,AWUSER,AWVALID,WID,WDATA,WSTRB,WLAST,WUSER,WVALID
-//description:axi write 
+//task:write_data
+//description:axi write data channel
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 task axi_master_driver::write_data();
     int unsigned  i = 0;
-    AXI_transfer  m_trx;
+    axi_transaction  m_tr;
 
     forever begin
-
-      repeat(m_wr_queue.size()==0) @(posedge m_vif.AXI_ACLK);
-
+      repeat(m_wr_queue.size()==0) @(posedge m_vif.ACLK);
       if (m_wr_data_indx < m_wr_queue.size()) begin
-          m_trx = m_wr_queue[m_wr_data_indx];
-
-          repeat(m_trx.data_wt_delay) @(posedge m_vif.AXI_ACLK);
+          m_tr = m_wr_queue[m_wr_data_indx];
+          repeat(m_tr.data_wt_delay) @(posedge m_vif.ACLK);
 
           // sent trx
-          while (i<=m_trx.len) begin
-
-            `delay(m_conf.half_cycle);
+          while (i<=m_tr.len) begin
             m_vif.WVALID  <= 1'b1;
             m_vif.WDATA   <= m_tr.data[i];
             m_vif.WSTRB   <= m_tr.strb[i];
             m_vif.WID     <= m_tr.id;
-            m_vif.WLAST   <= (i==m_trx.len)? 1'b1 : 1'b0;
-            @(posedge m_vif.AXI_ACLK);
+            m_vif.WLAST   <= (i==m_tr.len)? 1'b1 : 1'b0;
+            @(posedge m_vif.ACLK);
 
-            if (m_vif.AXI_WREADY && m_vif.AXI_WVALID)
+            if (m_vif.WREADY && m_vif.WVALID)
               i = i+1;
           end
-
-          // hold until all finish
-
-          // free trx
-          `delay(m_conf.half_cycle);
-          m_vif.AXI_WVALID <= 1'b0;
-          m_vif.AXI_WLAST  <= 1'b0;
+	  
+          // free tr
+          m_vif.WVALID <= 1'b0;
+          m_vif.WLAST  <= 1'b0;
           i = 0;
-          m_trx.data_done = `TRUE;
-          @(posedge m_vif.AXI_ACLK);
-
+          @(posedge m_vif.ACLK);
           m_wr_data_indx += 1;
-
-        end else begin
-          @(posedge m_vif.AXI_ACLK);
+        end 
+	else begin
+          @(posedge m_vif.ACLK);
         end
       end
-
-endtask : sent_data_write_trx
+endtask:write_data
 
 
 // data resp trx collect resp to trx
@@ -268,14 +186,14 @@ task axi_master_driver::received_resp_write_trx();
   forever begin
     `delay(m_conf.half_cycle);
      m_vif.AXI_BREADY <= 1'b0;
-     repeat($urandom_range(4,8)) @(posedge m_vif.AXI_ACLK);
+     repeat($urandom_range(4,8)) @(posedge m_vif.ACLK);
 
     `delay(m_conf.half_cycle);
      m_vif.AXI_BREADY <= 1'b1;
-     @(posedge m_vif.AXI_ACLK);
+     @(posedge m_vif.ACLK);
 
     // hold until BVALID received
-    while(!m_vif.AXI_BVALID) @(posedge m_vif.AXI_ACLK);
+    while(!m_vif.BVALID) @(posedge m_vif.ACLK);
   end
 
 endtask : received_resp_write_trx
@@ -287,14 +205,14 @@ task axi_master_driver::sent_addr_read_trx();
 
     forever begin
 
-      repeat(m_rd_queue.size()==0) @(posedge m_vif.AXI_ACLK);
+      repeat(m_rd_queue.size()==0) @(posedge m_vif.ACLK);
 
       if (m_rd_addr_indx < m_rd_queue.size()) begin
           m_trx = m_rd_queue[m_rd_addr_indx];
 
-          repeat(m_trx.addr_rd_delay) @(posedge m_vif.AXI_ACLK);
+          repeat(m_tr.addr_rd_delay) @(posedge m_vif.ACLK);
 
-          // sent trx
+          // sent tr
           `delay(m_conf.half_cycle);
           m_vif.ARVALID <= 1'b1;
           m_vif.ARID    <= m_tr.id;
@@ -315,13 +233,13 @@ task axi_master_driver::sent_addr_read_trx();
 
           // free trx
          `delay(m_conf.half_cycle);
-         m_vif.AXI_ARVALID <= 1'b0;
-         @(posedge m_vif.AXI_ACLK);
+         m_vif.ARVALID <= 1'b0;
+         @(posedge m_vif.ACLK);
 
          m_rd_addr_indx += 1;
 
       end else begin
-        @(posedge m_vif.AXI_ACLK);
+        @(posedge m_vif.ACLK);
       end
     end
 
