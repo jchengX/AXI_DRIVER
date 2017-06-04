@@ -10,6 +10,7 @@
 class axi_master_driver extends uvm_driver #(axi_transaction);
 
   virtual interface axi_if    m_vif;
+  logic [AXI_DATA_WIDTH-1:0]  rd_data;
   axi_transaction             m_wr_queue[$];
   axi_transaction             m_rd_queue[$];
   int unsigned                m_wr_addr_indx = 0;
@@ -52,7 +53,7 @@ task axi_master_driver::run_phase(uvm_phase phase);
 		write_addr();write_data();received_resp_write();
 	      join
 	READ: fork
-		read_addr();read_data;
+		read_addr();read_data(rd_data);
 	      join
 	default:`uvm_fatal("axi_driver","No valid command")
      endcase
@@ -216,9 +217,9 @@ endtask : read_addr
 //task:read_data
 //description:axi read data channel
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-task axi_master_driver::read_data(output [AXI_DATA_WIDTH-1:0] rd_data);
+task axi_master_driver::read_data(output logic [AXI_DATA_WIDTH-1:0] rd_data);
   always@(posedge m_vif.ACLK)
-  rd_data = (m_vif.RVALID && m_vif.RREADY)? m_vif.RDATA:0;
+  rd_data = (m_vif.RVALID && m_vif.RREADY)? m_vif.RDATA : 0;
   forever begin
      m_vif.RREADY <= 1'b0;
      repeat(2) @(posedge m_vif.ACLK);
