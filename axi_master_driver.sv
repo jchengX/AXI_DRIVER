@@ -69,7 +69,8 @@ endtask : run_phase
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 task axi_master_driver::reset();
     begin
-      @(posedge m_vif.ARESET_N);
+      //@(posedge m_vif.ARESET_N);
+      @(posedge m_vif.ACLK);
         m_vif.AWID   <= 0;
         m_vif.AWADDR <= 0;
 	m_vif.AWLEN  <= 0;
