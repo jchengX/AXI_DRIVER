@@ -10,6 +10,7 @@
 class axi_master_driver extends uvm_driver #(axi_transaction);
 
   virtual interface axi_if    m_vif;
+  m_vif.cb_drv hook;
   logic [AXI_DATA_WIDTH-1:0]  rd_data;
   axi_transaction             m_wr_queue[$];
   axi_transaction             m_rd_queue[$];
@@ -70,10 +71,9 @@ endtask : run_phase
 task axi_master_driver::reset();
     begin
       //@(posedge m_vif.ARESET_N);
-      @(posedge m_vif.ACLK);
-        m_vif.AWID   <= 0;
-        m_vif.AWADDR <= 0;
-	m_vif.AWLEN  <= 0;
+        hook.AWID   <= 0;
+        hook.AWADDR <= 0;
+	hook.AWLEN  <= 0;
 		...
     end
 endtask:reset
@@ -93,23 +93,21 @@ task axi_master_driver::write_addr();
           repeat(m_trx.addr_wt_delay) @(posedge m_vif.ACLK);
 	  
           // sent tr
-          m_vif.AWVALID <= 1'b1;
-          m_vif.AWID    <= m_tr.id;
-          m_vif.AWADDR  <= m_tr.addr;
-          m_vif.AWREG   <= m_tr.region;
-          m_vif.AWLEN   <= m_tr.len;
-          m_vif.AWSIZE  <= m_tr.size;
-          m_vif.AWBURST <= m_tr.burst;
-          m_vif.AWLOCK  <= m_tr.lock;
-          m_vif.AWCACHE <= m_tr.cache;
-          m_vif.AWPROT  <= m_tr.prot;
-          m_vif.AWQOS   <= m_tr.qos;
-          @(posedge m_vif.ACLK);
+          hook.AWVALID <= 1'b1;
+          hook.AWID    <= m_tr.id;
+          hook.AWADDR  <= m_tr.addr;
+          hook.AWREG   <= m_tr.region;
+          hook.AWLEN   <= m_tr.len;
+          hook.AWSIZE  <= m_tr.size;
+          hook.AWBURST <= m_tr.burst;
+          hook.AWLOCK  <= m_tr.lock;
+          hook.AWCACHE <= m_tr.cache;
+          hook.AWPROT  <= m_tr.prot;
+          hook.AWQOS   <= m_tr.qos;
 
           //wait AWREADY
-          while (!m_vif.AWREADY) @(posedge m_vif.ACLK);
-	  @(posedge m_vif.ACLK);
-          m_vif.AWVALID <= 1'b0;
+          while (!hook.AWREADY) @(posedge m_vif.ACLK);
+          hook.AWVALID <= 1'b0;
           m_wr_addr_indx += 1;
       end 
       else begin
@@ -133,11 +131,11 @@ task axi_master_driver::write_data();
 
           // sent trx
           while (i<=m_tr.len) begin
-            m_vif.WVALID  <= 1'b1;
-            m_vif.WDATA   <= m_tr.data[i];
-            m_vif.WSTRB   <= m_tr.strb[i];
-            m_vif.WID     <= m_tr.id;
-            m_vif.WLAST   <= (i==m_tr.len)? 1'b1 : 1'b0;
+            hook.WVALID  <= 1'b1;
+            hook.WDATA   <= m_tr.data[i];
+            hook.WSTRB   <= m_tr.strb[i];
+            hook.WID     <= m_tr.id;
+            hook.WLAST   <= (i==m_tr.len)? 1'b1 : 1'b0;
             @(posedge m_vif.ACLK);
 
             if (m_vif.WREADY && m_vif.WVALID)
@@ -145,8 +143,8 @@ task axi_master_driver::write_data();
           end
 	  
           // free tr
-          m_vif.WVALID <= 1'b0;
-          m_vif.WLAST  <= 1'b0;
+          hook.WVALID <= 1'b0;
+          hook.WLAST  <= 1'b0;
           i = 0;
           @(posedge m_vif.ACLK);
           m_wr_data_indx += 1;
@@ -163,10 +161,10 @@ endtask:write_data
 //TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 task axi_master_driver::received_resp_write();
   forever begin
-     m_vif.BREADY <= 1'b0;
+     hook.BREADY <= 1'b0;
      repeat(2) @(posedge m_vif.ACLK);
 
-     m_vif.BREADY <= 1'b1;
+     hook.BREADY <= 1'b1;
      @(posedge m_vif.ACLK);
 
     //wait BVALID received
@@ -188,23 +186,21 @@ task axi_master_driver::read_addr();
           repeat(m_tr.addr_rd_delay) @(posedge m_vif.ACLK);
 
           // sent tr
-          m_vif.ARVALID <= 1'b1;
-          m_vif.ARID    <= m_tr.id;
-          m_vif.ARADDR  <= m_tr.addr;
-          m_vif.ARREADY <= m_tr.region;
-          m_vif.ARLEN   <= m_tr.len;
-          m_vif.ARSIZE  <= m_tr.size;
-          m_vif.ARBURST <= m_tr.burst;
-          m_vif.ARLOCK  <= m_tr.lock;
-          m_vif.ARCACHE <= m_tr.cache;
-          m_vif.ARPROT  <= m_tr.prot;
-          m_vif.ARQOS   <= m_tr.qos;
-          @(posedge m_vif.ACLK);
+          hook.ARVALID <= 1'b1;
+          hook.ARID    <= m_tr.id;
+          hook.ARADDR  <= m_tr.addr;
+          hook.ARREADY <= m_tr.region;
+          hook.ARLEN   <= m_tr.len;
+          hook.ARSIZE  <= m_tr.size;
+          hook.ARBURST <= m_tr.burst;
+          hook.ARLOCK  <= m_tr.lock;
+          hook.ARCACHE <= m_tr.cache;
+          hook.ARPROT  <= m_tr.prot;
+          hook.ARQOS   <= m_tr.qos;
 
           //wait ARREADY received
-          while(!m_vif.ARREADY) @(posedge m_vif.ACLK);
-    	  @(posedge m_vif.ACLK);
-          m_vif.ARVALID <= 1'b0;
+          while(!hook.ARREADY) @(posedge m_vif.ACLK);
+          hook.ARVALID <= 1'b0;
           @(posedge m_vif.ACLK);
 	  m_rd_addr_indx += 1;
       end 
@@ -224,14 +220,13 @@ task axi_master_driver::read_data(output logic [AXI_DATA_WIDTH-1:0] rd_data);
   forever begin
      m_vif.RREADY <= 1'b0;
      repeat(2) @(posedge m_vif.ACLK);
-     m_vif.RREADY <= 1'b1;
-     @(posedge m_vif.ACLK);
+     hook.RREADY <= 1'b1;
      
      //wait RVALID received
-     while(!m_vif.RVALID) @(posedge m_vif.ACLK);   
+     while(!hook.RVALID) @(posedge m_vif.ACLK);   
      // continuous burst case
-     while(!m_vif.RLAST) @(posedge m_vif.ACLK);
-     m_vif.RREADY <= 1'b0;
+     while(!hook.RLAST) @(posedge m_vif.ACLK);
+     hook.RREADY <= 1'b0;
   end
 endtask : read_data
 
