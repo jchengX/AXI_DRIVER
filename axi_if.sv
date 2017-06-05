@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////////////
-// File : axi_vif.sv
+// File : axi_if.sv
 // Date : 2017/06/03
 // Description : axi virtual interface which is a connection pool interface for DUT and TB
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -25,161 +25,161 @@ interface axi_if #(
 		(input ACLK, input ARESET_N);//define axi interface
 
     // AXI address write channel
-    logic [AXI_ID_WIDTH-1:0]		AXI_AWID;
-    logic [AXI_ADDR_WIDTH-1:0]		AXI_AWADDR;
-    logic [AXI_REG_WITH-1:0]    	AXI_AWREG;
-    logic [AXI_LEN_WIDTH-1:0]		AXI_AWLEN;
-    logic [AXI_SIZE_WIDTH-1:0]		AXI_AWSIZE;
-    logic [AXI_BURST_WIDTH-1:0]		AXI_AWBURST;
-    logic [AXI_LOCK_WIDTH-1:0]		AXI_AWLOCK;
-    logic [AXI_CACHE_WIDTH-1:0]		AXI_AWCACHE;
-    logic [AXI_PROT_WIDTH-1:0]		AXI_AWPROT;
-    logic [AXI_QOS_WIDTH-1:0]		AXI_AWQOS;
-    logic [AXI_VALID_WIDTH-1:0]		AXI_AWVALID;
-    logic [AXI_READY_WIDTH-1:0]		AXI_AWREADY;
+    logic [AXI_ID_WIDTH-1:0]		AWID;
+    logic [AXI_ADDR_WIDTH-1:0]		AWADDR;
+    logic [AXI_REG_WITH-1:0]    	AWREG;
+    logic [AXI_LEN_WIDTH-1:0]		AWLEN;
+    logic [AXI_SIZE_WIDTH-1:0]		AWSIZE;
+    logic [AXI_BURST_WIDTH-1:0]		AWBURST;
+    logic [AXI_LOCK_WIDTH-1:0]		AWLOCK;
+    logic [AXI_CACHE_WIDTH-1:0]		AWCACHE;
+    logic [AXI_PROT_WIDTH-1:0]		AWPROT;
+    logic [AXI_QOS_WIDTH-1:0]		AWQOS;
+    logic [AXI_VALID_WIDTH-1:0]		AWVALID;
+    logic [AXI_READY_WIDTH-1:0]		AWREADY;
 
     // AXI data write channel
-    logic [AXI_ID_WIDTH-1:-0]		AXI_WID;
-    logic [AXI_DATA_WIDTH-1:0]		AXI_WDATA;
-    logic [AXI_STRB_WIDTH-1:0]		AXI_WSTRB;
-    logic [AXI_LAST_WIDTH-1:0]		AXI_WLAST;
-    logic [AXI_VALID_WIDTH-1:0]		AXI_WVALID;
-    logic [AXI_READY_WIDTH-1:0]		AXI_WREADY;
+    logic [AXI_ID_WIDTH-1:-0]		WID;
+    logic [AXI_DATA_WIDTH-1:0]		WDATA;
+    logic [AXI_STRB_WIDTH-1:0]		WSTRB;
+    logic [AXI_LAST_WIDTH-1:0]		WLAST;
+    logic [AXI_VALID_WIDTH-1:0]		WVALID;
+    logic [AXI_READY_WIDTH-1:0]		WREADY;
 
     // AXI response write channel
-    logic [AXI_ID_WIDTH-1:0]		AXI_BID;
-    logic [AXI_RESP_WIDTH-1:0]		AXI_BRESP;
-    logic [AXI_VALID_WIDTH-1:0]		AXI_BVALID;
-    logic [AXI_READY_WIDTH-1:0]		AXI_BREADY;
+    logic [AXI_ID_WIDTH-1:0]		BID;
+    logic [AXI_RESP_WIDTH-1:0]		BRESP;
+    logic [AXI_VALID_WIDTH-1:0]		BVALID;
+    logic [AXI_READY_WIDTH-1:0]		BREADY;
 
     // AXI address read channel
-    logic [AXI_ID_WIDTH-1:0]		AXI_ARID;
-    logic [AXI_ADDR_WIDTH-1:0]		AXI_ARADDR;
-    logic [AXI_REG_WITH-1:0]     	AXI_ARREG;
-    logic [AXI_LEN_WIDTH-1:0]		AXI_ARLEN;
-    logic [AXI_SIZE_WIDTH-1:0]		AXI_ARSIZE;
-    logic [AXI_BURST_WIDTH-1:0]		AXI_ARBURST;
-    logic [AXI_LOCK_WIDTH-1:0]		AXI_ARLOCK;
-    logic [AXI_CACHE_WIDTH-1:0]		AXI_ARCACHE;
-    logic [AXI_PROT_WIDTH-1:0]		AXI_ARPROT;
-    logic [AXI_QOS_WIDTH-1:0]		AXI_ARQOS;
-    logic [AXI_VALID_WIDTH-1:0]		AXI_ARVALID;
-    logic [AXI_READY_WIDTH-1:0]		AXI_ARREADY;
+    logic [AXI_ID_WIDTH-1:0]		ARID;
+    logic [AXI_ADDR_WIDTH-1:0]		ARADDR;
+    logic [AXI_REG_WITH-1:0]     	ARREG;
+    logic [AXI_LEN_WIDTH-1:0]		ARLEN;
+    logic [AXI_SIZE_WIDTH-1:0]		ARSIZE;
+    logic [AXI_BURST_WIDTH-1:0]		ARBURST;
+    logic [AXI_LOCK_WIDTH-1:0]		ARLOCK;
+    logic [AXI_CACHE_WIDTH-1:0]		ARCACHE;
+    logic [AXI_PROT_WIDTH-1:0]		ARPROT;
+    logic [AXI_QOS_WIDTH-1:0]		ARQOS;
+    logic [AXI_VALID_WIDTH-1:0]		ARVALID;
+    logic [AXI_READY_WIDTH-1:0]		ARREADY;
 
     // AXI data read channel
-    logic [AXI_ID_WIDTH-1:0]		AXI_RID;
-    logic [AXI_DATA_WIDTH-1:0]		AXI_RDATA;
-    logic [AXI_RESP_WIDTH-1:0]		AXI_RRESP;
-    logic [AXI_LAST_WIDTH-1:0]		AXI_RLAST;
-    logic [AXI_VALID_WIDTH-1:0]		AXI_RVALID;
-    logic [AXI_READY_WIDTH-1:0]		AXI_RREADY;
+    logic [AXI_ID_WIDTH-1:0]		RID;
+    logic [AXI_DATA_WIDTH-1:0]		RDATA;
+    logic [AXI_RESP_WIDTH-1:0]		RRESP;
+    logic [AXI_LAST_WIDTH-1:0]		RLAST;
+    logic [AXI_VALID_WIDTH-1:0]		RVALID;
+    logic [AXI_READY_WIDTH-1:0]		RREADY;
 
 	
 
-	modport slave(input 	AXI_AWID,
-		      input	AXI_AWADDR,
-                      input     AXI_AWREG,
-                      input     AXI_AWLEN,
-                      input     AXI_AWSIZE,
-                      input     AXI_AWBURST,
-                      input     AXI_AWLOCK,
-                      input     AXI_AWCACHE,
-                      input     AXI_AWPROT,
-                      input     AXI_AWQOS,
-                      input     AXI_AWVALID,
-                      output    AXI_AWREADY,
+	modport slave(input 	AWID,
+		      input	AWADDR,
+                      input     AWREG,
+                      input     AWLEN,
+                      input     AWSIZE,
+                      input     AWBURST,
+                      input     AWLOCK,
+                      input     AWCACHE,
+                      input     AWPROT,
+                      input     AWQOS,
+                      input     AWVALID,
+                      output    AWREADY,
                               
-                      input     AXI_WID,
-                      input     AXI_WDATA,
-                      input     AXI_WSTRB,
-                      input     AXI_WLAST,
-                      input     AXI_WVALID,
-                      output    AXI_WREADY,
+                      input     WID,
+                      input     WDATA,
+                      input     WSTRB,
+                      input     WLAST,
+                      input     WVALID,
+                      output    WREADY,
                                     
-                      output    AXI_BID,
-                      output    AXI_BRESP,
-                      output    AXI_BVALID,
-                      input     AXI_BREADY,
+                      output    BID,
+                      output    BRESP,
+                      output    BVALID,
+                      input     BREADY,
                  
-                      input     AXI_ARID,
-                      input     AXI_ARADDR,
-                      input     AXI_ARREG,
-                      input     AXI_ARLEN,
-                      input     AXI_ARSIZE,
-                      input     AXI_ARBURST,
-                      input     AXI_ARLOCK,
-                      input     AXI_ARCACHE,
-                      input     AXI_ARPROT,
-                      input     AXI_ARQOS,
-                      input     AXI_ARVALID,
-                      output    AXI_ARREADY,
+                      input     ARID,
+                      input     ARADDR,
+                      input     ARREG,
+                      input     ARLEN,
+                      input     ARSIZE,
+                      input     ARBURST,
+                      input     ARLOCK,
+                      input     ARCACHE,
+                      input     ARPROT,
+                      input     ARQOS,
+                      input     ARVALID,
+                      output    ARREADY,
                                 
-                      output    AXI_RID,
-                      output    AXI_RDATA,
-		      output    AXI_RRESP,
-		      output    AXI_RLAST,
-                      output    AXI_RVALID,
-		      input     AXI_RREADY
+                      output    RID,
+                      output    RDATA,
+		      output    RRESP,
+		      output    RLAST,
+                      output    RVALID,
+		      input     RREADY
 			);
-	modport master(output 	AXI_AWID,
-		      output    AXI_AWADDR,
-                      output    AXI_AWREG,
-                      output    AXI_AWLEN,
-                      output    AXI_AWSIZE,
-                      output    AXI_AWBURST,
-                      output    AXI_AWLOCK,
-                      output    AXI_AWCACHE,
-                      output    AXI_AWPROT,
-                      output    AXI_AWQOS,
-                      output    AXI_AWVALID,
-                      input     AXI_AWREADY,
+	modport master(output 	AWID,
+		      output    AWADDR,
+                      output    AWREG,
+                      output    AWLEN,
+                      output    AWSIZE,
+                      output    AWBURST,
+                      output    AWLOCK,
+                      output    AWCACHE,
+                      output    AWPROT,
+                      output    AWQOS,
+                      output    AWVALID,
+                      input     AWREADY,
                               
-                      output    AXI_WID,
-                      output    AXI_WDATA,
-                      output    AXI_WSTRB,
-                      output    AXI_WLAST,
-                      output    AXI_WVALID,
-                      input     AXI_WREADY,
+                      output    WID,
+                      output    WDATA,
+                      output    WSTRB,
+                      output    WLAST,
+                      output    WVALID,
+                      input     WREADY,
                                     
-                      input     AXI_BID,
-                      input     AXI_BRESP,
-                      input     AXI_BVALID,
-                      output    AXI_BREADY,
+                      input     BID,
+                      input     BRESP,
+                      input     BVALID,
+                      output    BREADY,
                  
-                      output    AXI_ARID,
-                      output    AXI_ARADDR,
-                      output    AXI_ARREG,
-                      output    AXI_ARLEN,
-                      output    AXI_ARSIZE,
-                      output    AXI_ARBURST,
-                      output    AXI_ARLOCK,
-                      output    AXI_ARCACHE,
-                      output    AXI_ARPROT,
-                      output    AXI_ARQOS,
-                      output    AXI_ARVALID,
-                      input     AXI_ARREADY,
+                      output    ARID,
+                      output    ARADDR,
+                      output    ARREG,
+                      output    ARLEN,
+                      output    ARSIZE,
+                      output    ARBURST,
+                      output    ARLOCK,
+                      output    ARCACHE,
+                      output    ARPROT,
+                      output    ARQOS,
+                      output    ARVALID,
+                      input     ARREADY,
                                  
-                      input     AXI_RID,
-                      input     AXI_RDATA,
-		      input     AXI_RRESP,
-		      input     AXI_RLAST,
-                      input     AXI_RVALID,
-		      output    AXI_RREADY
+                      input     RID,
+                      input     RDATA,
+		      input     RRESP,
+		      input     RLAST,
+                      input     RVALID,
+		      output    RREADY
 			);
 
 `ifdef SIMULATION
 	default clocking cb_drv @(posedge ACLK);
-		input 
-		output
+		input AWREADY,WREADY,...;
+		output AWID,AWADDR,...;
 	endclocking:cb_drv
 	
 	clocking cb_mon @(posedge ACLK);
-		input
+		input AWID,AWADDR,...;
 	endclocking:cb_mon
 
 	clocking cb_recv @(posedge ACLK);
-		input
-		output
+		input AWID,AWADDR,...;
+		output AWREADY,WREADY,...;
 	endclocking:cb_recv
 	
 	modport driver(
@@ -187,7 +187,7 @@ interface axi_if #(
 		input cb_drv
 		);
 	modport monitor(
-		input ACLK,RESET_N,
+		input ACLK,ARESET_N,
 		input cb_mon
 		);
 	modport reciver(
